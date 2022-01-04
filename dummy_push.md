@@ -1,7 +1,7 @@
 ---
 title: "Dummy Push"
 author: "Benjamin Prieto"
-date: "2022-01-03"
+date: "2022-01-04"
 output: 
   html_document: 
     keep_md: yes
@@ -13,23 +13,8 @@ output:
 
 ```r
 options(repos = c(CRAN = "http://cran.rstudio.com"))
-install.packages("tidyverse")
-```
-
-```
-## 
-## The downloaded binary packages are in
-## 	/var/folders/h3/80yvmmdx6_x5l53wyk3hjyb40000gn/T//RtmpYoLVKy/downloaded_packages
-```
-
-```r
-install.packages("nycflights13")
-```
-
-```
-## 
-## The downloaded binary packages are in
-## 	/var/folders/h3/80yvmmdx6_x5l53wyk3hjyb40000gn/T//RtmpYoLVKy/downloaded_packages
+#install.packages("tidyverse")
+#install.packages("nycflights13")
 ```
 
 ## Working directory
