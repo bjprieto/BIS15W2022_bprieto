@@ -1,0 +1,317 @@
+---
+title: "Lab 10 Homework"
+author: "Benjamin Prieto"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    theme: spacelab
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Instructions
+Answer the following questions and complete the exercises in RMarkdown. Please embed all of your code and push your final work to your repository. Your final lab report should be organized, clean, and run free from errors. Remember, you must remove the `#` for the included code chunks to run. Be sure to add your name to the author header above. For any included plots, make sure they are clearly labeled. You are free to use any plot type that you feel best communicates the results of your analysis.  
+
+Make sure to use the formatting conventions of RMarkdown to make your report neat and clean!  
+
+## Load the libraries
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(janitor)
+library(here)
+library(naniar)
+``` 
+
+## Desert Ecology
+For this assignment, we are going to use a modified data set on [desert ecology](http://esapubs.org/archive/ecol/E090/118/). The data are from: S. K. Morgan Ernest, Thomas J. Valone, and James H. Brown. 2009. Long-term monitoring and experimental manipulation of a Chihuahuan Desert ecosystem near Portal, Arizona, USA. Ecology 90:1708.
+```{r}
+deserts <- read_csv(here("lab10", "data", "surveys_complete.csv"))
+```
+
+**1. Use the function(s) of your choice to get an idea of its structure, including how NA's are treated. Are the data tidy?**
+
+Data Organization
+```{r}
+deserts
+```
+
+Variable Names and Classes
+```{r}
+glimpse(deserts)
+```
+
+Check for NAs Across Variables
+```{r}
+miss_var_summary(deserts)
+```
+
+Variable Classes, Spread, NAs
+```{r}
+summary(deserts)
+```
+
+NAs are represented by NAs, and the data is tidy in its recording.
+
+
+**2. How many genera and species are represented in the data? What are the total number of observations? Which species is most/ least frequently sampled in the study?**
+
+Names Check
+```{r}
+names(deserts)
+```
+
+
+Genera and Species Represented, Total Number of Observations
+```{r}
+deserts %>% 
+  summarize(genera_represented = n_distinct(genus),
+            species_represented = n_distinct(species),
+            n_total = sum(n()))
+```
+
+Most Sampled Species
+```{r}
+deserts %>% 
+  count(species) %>% 
+  arrange(desc(n)) %>% 
+  filter(n == max(n))
+```
+
+Least Sampled Species
+```{r}
+deserts %>% 
+  count(species) %>% 
+  arrange(desc(n)) %>% 
+  filter(n == min(n))
+```
+
+Plot: Species Sampling
+```{r}
+deserts %>% 
+  count(species) %>% 
+  ggplot(aes(x = reorder(species,n), y = n))+
+  geom_col()+
+  coord_flip()+
+  labs(x = "Species",
+       title = "Sampling of Species",)+
+  theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+
+**3. What is the proportion of taxa included in this study? Show a table and plot that reflects this count.**
+
+Reference
+```{r}
+taxa_prop <- deserts %>% 
+  tabyl(taxa)
+taxa_prop
+```
+
+Plot
+```{r}
+taxa_prop %>% 
+  ggplot(aes(x = "",y = percent, fill = taxa))+
+  geom_col()+
+  coord_polar(theta = "y")+ #arrange data as a pie chart
+  labs(x = NULL,
+       y = NULL,
+       title = "Proportion of Taxa Among Deserts Animal Samples",)+
+  scale_y_continuous(labels = scales::percent)+ #scale y to percent
+  theme(plot.title = element_text(hjust = 0.5, size = 11)) 
+```
+
+
+**4. For the taxa included in the study, use the fill option to show the proportion of individuals sampled by `plot_type.`**
+
+Reference
+```{r}
+taxa_prop_plot <- deserts %>% 
+  group_by(taxa, plot_type) %>% 
+  count(taxa, species)
+taxa_prop_plot
+```
+
+Plot
+```{r}
+taxa_prop_plot %>% 
+  ggplot(aes(x = taxa, y = n, fill = plot_type))+
+  geom_col(position = position_fill())+
+  scale_y_continuous(labels = scales::percent)+
+  labs(x = "Taxa",
+       y = "n",
+       title = "Taxa Proportions of Desert Animals by Plot Type")+
+  theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+
+**5. What is the range of weight for each species included in the study? Remove any observations of weight that are NA so they do not show up in the plot.**
+
+Reference
+```{r}
+deserts %>% 
+  select(species, weight) %>% 
+  group_by(species) %>% 
+  filter(weight!=is.na(weight)) %>% 
+  summarize(min_weight = min(weight),
+            median_weight = median(weight),
+            max_weight = max(weight))
+```
+
+Plot
+```{r}
+deserts %>% 
+  ggplot(aes(x = species, y = weight))+
+  geom_boxplot()+
+  scale_y_log10()+
+  coord_flip()+
+  labs(x = "Species",
+       y = "Log 10 Weight",
+       title = "Desert Animal Weight by Species")+
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.y = element_text(size = 8))
+```
+
+
+**6. Add another layer to your answer from #4 using `geom_point` to get an idea of how many measurements were taken for each species.**
+
+Reference
+```{r}
+deserts %>% 
+  count(taxa, species) %>% 
+  arrange(desc(species))
+```
+Plot
+```{r}
+taxa_prop_plot %>% 
+  ggplot(aes(x = taxa, y = n, fill = plot_type))+
+  geom_col(position = position_fill())+
+  labs(x = "Taxa",
+       y = "n",
+       title = "Taxa Proportions of Desert Animals by Plot Type")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_point()
+```
+
+
+
+**7. [Dipodomys merriami](https://en.wikipedia.org/wiki/Merriam's_kangaroo_rat) is the most frequently sampled animal in the study. How have the number of observations of this species changed over the years included in the study?**
+
+Reference
+```{r}
+merriami_by_year <- deserts %>% 
+  filter(species == "merriami") %>% 
+  group_by(year) %>% 
+  count(species)
+merriami_by_year
+```
+
+Plot
+```{r}
+merriami_by_year %>% 
+  ggplot(aes(x = year, y = n))+
+  geom_col()+
+  labs(x = "Year",
+       y = "n",
+       title = "Dipodomys merriami Samples by Year")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+**8. What is the relationship between `weight` and `hindfoot` length? Consider whether or not over plotting is an issue.**
+
+Reference
+```{r}
+deserts %>% 
+  select(weight, hindfoot_length)
+```
+
+Plot
+```{r}
+deserts %>% 
+  ggplot(aes(x = weight, y = hindfoot_length))+
+  geom_point(size = 0.5, alpha = 0.6)+
+  geom_smooth(method = "lm")+
+  scale_y_log10()+
+  scale_x_log10()+
+  labs(x = "Log 10 Weight",
+       y = "Log 10 Hindfoot Length",
+       title = "Hindfoot Length vs. Weight")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Overplotting is not an issue since we are only concerned with the correlation of data and not necessarily the location/values of each point, especially given how dense the data is.
+
+
+**9. Which two species have, on average, the highest weight? Once you have identified them, make a new column that is a ratio of `weight` to `hindfoot_length`. Make a plot that shows the range of this new ratio and fill by sex.**
+
+Species with the top two highest average weight
+```{r}
+deserts %>% 
+  group_by(species) %>%
+  summarize(avg_weight = mean(weight, na.rm = T)) %>% 
+  top_n(avg_weight, n = 2)
+```
+
+Reference
+```{r}
+top2_wt <- deserts %>% 
+  group_by(species) %>%
+  filter(species == "albigula" | species == "spectabilis",
+         weight != is.na(weight),
+         hindfoot_length != is.na(hindfoot_length)) %>% 
+  select(species, sex, weight, hindfoot_length) %>% 
+  mutate(wt_hindft_ratio = weight/hindfoot_length)
+top2_wt
+```
+
+Reference 2
+```{r}
+top2_wt %>% 
+  group_by(species, sex) %>% 
+  summarize(min_wh_ratio = min(wt_hindft_ratio),
+            median_wh_ratio = median(wt_hindft_ratio),
+            max_wh_ratio = max(wt_hindft_ratio))
+```
+
+Plot
+```{r}
+top2_wt %>% 
+  ggplot(aes(x = species, y = wt_hindft_ratio, fill = sex))+
+  geom_boxplot()+
+  labs(x = "Species",
+       y = "Weight to Hindfoot Ratio",
+       title = "Weight to Hindfoot Ratio by Species")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+**10. Make one plot of your choice! Make sure to include at least two of the aesthetics options you have learned.**
+
+What are the relative species abundances by taxa in the data?
+
+Reference
+```{r}
+deserts %>% 
+  group_by(taxa) %>% 
+  count(species)
+```
+Plot
+```{r}
+deserts %>% 
+  group_by(taxa) %>% 
+  count(species) %>% 
+  ggplot(aes(x = taxa, y = n, fill = species))+
+  geom_col(position = position_fill())+
+  scale_y_continuous(labels = scales::percent)+
+  labs(x = "Taxa",
+       y = "% Distinct Species",
+       title = "Relative Species Abundance by Taxa Sampled")+
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
+```
+
+## Push your final code to GitHub!
+Please be sure that you check the `keep md` file in the knit preferences. 
