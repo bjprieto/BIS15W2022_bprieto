@@ -1,7 +1,7 @@
 ---
 title: "Lab 11 Homework"
 author: "Benjamin Prieto"
-date: "2022-02-11"
+date: "2022-02-14"
 output:
   html_document: 
     theme: spacelab
